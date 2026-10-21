@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FlowCast - Traffic Congestion Predictor</title>
+<meta name="description" content="Predict corridor congestion hour by hour with an in-browser time-series model. Plan departures, explore the week heatmap, see the model's own error.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#059669">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="design.css">
+<style>
+.grid{display:grid;grid-template-columns:380px 1fr;gap:22px;align-items:start}
+@media(max-width:1020px){.grid{grid-template-columns:1fr}}
+.sect{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+canvas.chart{width:100%;display:block}
+.best{font-size:clamp(30px,4vw,40px);font-weight:800;letter-spacing:-.02em;background:linear-gradient(120deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);font-weight:600;margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.hmap{border-collapse:collapse;width:100%;font-size:10.5px}
+.hmap th{color:var(--muted);font-weight:700;padding:4px 3px;text-align:center}
+.hmap td{padding:0}
+.hcell{height:26px;border-radius:5px;margin:1.5px;display:grid;place-items:center;font-weight:700;cursor:default;transition:transform .1s}
+.hcell:hover{transform:scale(1.12)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.stat{background:var(--surface2);border-radius:12px;padding:11px 13px}
+.stat b{display:block;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.stat span{font-size:11.5px;color:var(--muted);font-weight:600}
+.stack{display:grid;gap:22px}
+.limit-card{border-left:4px solid var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--surface));font-size:13.5px;color:var(--muted)}
+.limit-card b{color:var(--ink)}
+.save-pill{display:inline-block;margin-top:10px;padding:7px 14px;border-radius:99px;background:color-mix(in srgb,#16a34a 12%,var(--surface));color:#16a34a;font-weight:700;font-size:13px}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <div class="brand"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="6" fill="url(#g)"/><circle cx="12" cy="12" r="2" fill="#fff"/><path d="M12 6v2M12 16v2M6 12h2M16 12h2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><defs><linearGradient id="g" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#059669"/><stop offset="1" stop-color="#34d399"/></linearGradient></defs></svg>&nbsp;FlowCast</div>
+  <span class="sp"></span>
+  <button id="btn-install" class="icon-btn" hidden title="Install app">⤓</button>
+  <button id="btn-theme" class="icon-btn" title="Toggle theme">☾</button>
+</nav>
+<main class="page">
+  <header class="page-head">
+    <h1>Leave when the road is <em>yours</em></h1>
+    <p>A seasonal time-series model trains in your browser on 12 weeks of corridor sensor data and predicts congestion hour by hour - with its own measured error on display.</p>
+  </header>
+  <div class="grid">
+    <div class="stack">
+      <section class="card"><div class="card-body">
+        <h2 class="sect">Plan a trip</h2>
+        <div class="field"><label for="corridor">Corridor</label>
+          <select id="corridor" class="input">
+            <option value="0">Riverside Expressway (downtown)</option>
+            <option value="1">Harbor Tunnel</option>
+            <option value="2">Airport Connector</option>
+            <option value="3">University Boulevard</option>
+          </select></div>
+        <div class="field"><label for="day">Day</label>
+          <select id="day" class="input"></select></div>
+        <div class="field"><label for="tripmin">Trip length</label>
+          <select id="tripmin" class="input">
+            <option value="15">15 min</option>
+            <option value="30" selected>30 min</option>
+            <option value="45">45 min</option>
+            <option value="60">60 min</option>
+          </select></div>
+      </div></section>
+      <section class="card"><div class="card-body">
+        <h2 class="sect">Best departure windows</h2>
+        <div class="best" id="best">–</div>
+        <div class="save-pill" id="save">–</div>
+      </div></section>
+      <section class="card"><div class="card-body">
+        <h2 class="sect">Model honesty</h2>
+        <div class="stat-grid">
+          <div class="stat"><b id="m-mape">–</b><span>Backtest MAPE</span></div>
+          <div class="stat"><b id="m-n">–</b><span>Training hours</span></div>
+          <div class="stat"><b id="m-ms">–</b><span>Train time</span></div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px">MAPE measured by training on 11 weeks and predicting the 12th, repeated across corridors.</p>
+      </div></section>
+      <section class="card limit-card"><div class="card-body">
+        <b>Honest limits.</b> Sensor feeds block server-side fetching without API keys, so the 12-week dataset is <b>simulated</b> with realistic rush-hour, weekend, incident and weather patterns. The forecasting model and its error measurement are real.
+      </div></section>
+    </div>
+    <div class="stack">
+      <section class="card"><div class="card-body">
+        <h2 class="sect">Predicted congestion - <span id="chartTitle">–</span></h2>
+        <canvas class="chart" id="dayChart" height="240"></canvas>
+        <div class="legend"><span><i style="background:var(--accent)"></i>Predicted</span><span><i style="background:#8a97ad"></i>Same day last week (actual)</span><span><i style="background:#f59e0b"></i>Congestion threshold</span></div>
+      </div></section>
+      <section class="card"><div class="card-body">
+        <h2 class="sect">Week heatmap</h2>
+        <div id="heatmap"></div>
+        <div class="legend" style="margin-top:10px"><span><i style="background:#dcfce7"></i>Free flow</span><span><i style="background:#fde68a"></i>Moderate</span><span><i style="background:#fca5a5"></i>Heavy</span><span><i style="background:#dc2626"></i>Standstill</span></div>
+      </div></section>
+    </div>
+  </div>
+</main>
+<script src="core.js"></script>
+<script src="app.js"></script>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')</script>
+</body>
+</html>

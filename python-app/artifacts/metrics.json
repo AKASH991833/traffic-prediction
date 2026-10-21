@@ -1,0 +1,28 @@
+{
+  "mae_veh_per_h": 269,
+  "r2": 0.944,
+  "n_train": 32460,
+  "n_test": 8115,
+  "dataset": "UCI Metro Interstate Traffic Volume (I-94, 2012-2018)",
+  "features": [
+    "hour",
+    "dow",
+    "month",
+    "is_weekend",
+    "is_holiday",
+    "temp_c",
+    "rain_1h",
+    "snow_1h",
+    "clouds_all",
+    "weather_Clouds",
+    "weather_Drizzle",
+    "weather_Fog",
+    "weather_Haze",
+    "weather_Mist",
+    "weather_Rain",
+    "weather_Smoke",
+    "weather_Snow",
+    "weather_Squall",
+    "weather_Thunderstorm"
+  ]
+}

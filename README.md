@@ -30,3 +30,19 @@ Vanilla HTML/CSS/JS, canvas charts, zero dependencies.
 ## Run locally
 
 Open `index.html` or serve the folder (`python3 -m http.server`).
+
+---
+
+## 🐍 Python version (real ML backend) - `python-app/`
+
+The browser demo above is fully client-side. This folder is the **pro-grade version** with a real training pipeline on real data:
+
+Predicts hourly I-94 traffic volume with XGBoost on 48,204 real observations (UCI). Time-based holdout: MAE 269 vehicles/h, R² 0.94. Stack: Python, Streamlit, XGBoost.
+
+```bash
+cd python-app
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Deploy free on **Hugging Face Spaces** (no card): create a Space, upload the `python-app/` folder - it ships Space-ready (`sdk` + `app_file` already set in its README). Retrain anytime with `python train.py` (where present).
